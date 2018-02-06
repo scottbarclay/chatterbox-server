@@ -12,23 +12,12 @@ this file and include it in basic-server.js so that it actually works.
 
 **************************************************************/
 
+var body = {
+  results: []
+};
+
 var requestHandler = function(request, response) {
-
-
-const { headers, method, url } = request;
-  let body = [];
-  request.on('error', (err) => {
-    console.error(err);
-  }).on('data', (chunk) => {
-    body.push(chunk);
-  }).on('end', () => {
-    body = Buffer.concat(body).toString();
-    // At this point, we have the headers, method, url and body, and can now
-    // do whatever we need to in order to respond to this request.
-  });
-
-
-
+  
   // Request and Response come from node's http module.
   //
   // They include information about both the incoming request, such as
@@ -37,37 +26,13 @@ const { headers, method, url } = request;
   //
   // Documentation for both request and response can be found in the HTTP section at
   // http://nodejs.org/documentation/api/
-
-  // Do some basic logging.
-  //
-  // Adding more logging to your server can be an easy way to get passive
-  // debugging help, but you should always be careful about leaving stray
-  // console.logs in your code.
-
-  //console.log('Serving request type ' + request.method + ' for url ' + request.url);
-
-  // The outgoing status.
-  var statusCode = 0;
   
-  var data = {
-    results: [{username: 'test-username', message: 'test-message'}]
-  };
-
-  if (request.method === 'POST' && request.url === '/classes/messages') {
-    data.results.push(JSON.parse(body));
-    console.log(data.results);
-
-    statusCode = 201;
-  } else if (request.method === 'POST') {
-    statusCode = 200;
-  } else if (request.method === 'GET' && request.url === '/classes/messages') {    
-    statusCode = 200;
-  } else if (request.method === 'OPTIONS') {
-    statusCode = 200;
-  } else {
-    statusCode = 404;
-  }
-
+  // Make sure to always call response.end() - Node may not send
+  // anything back to the client until you do. The string you pass to
+  // response.end() will be the body of the response - i.e. what shows
+  // up in the browser.
+  
+  //****
   // These headers will allow Cross-Origin Resource Sharing (CORS).
   // This code allows this server to talk to websites that
   // are on different domains, for instance, your chat client.
@@ -93,19 +58,53 @@ const { headers, method, url } = request;
   // other than plain text, like JSON or HTML.
   headers['Content-Type'] = 'application/json';
 
-  // .writeHead() writes to the request line and headers of the response,
-  // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
+  // The outgoing status.
+  var statusCode = 0;
 
-  // Make sure to always call response.end() - Node may not send
-  // anything back to the client until you do. The string you pass to
-  // response.end() will be the body of the response - i.e. what shows
-  // up in the browser.
-  //
-  // Calling .end "flushes" the response's internal buffer, forcing
-  // node to actually send all the data over to the client.
-  // response.end(JSON.stringify({results: []}));
-  response.end(JSON.stringify(data));
+  // should respond to GET requests for /classes/messages with a 200 status code
+  // should send back parsable stringified JSON
+  // should send back an object
+  // should send an object containing a `results` array
+  if (request.method === 'GET' && request.url === '/classes/messages') {
+    statusCode = 200;
+    // .writeHead() writes to the request line and headers of the response,
+    // which includes the status and all headers.
+    response.writeHead(statusCode, headers);
+    // Calling .end "flushes" the response's internal buffer, forcing
+    // node to actually send all the data over to the client.
+    response.end(JSON.stringify(body));
+
+  //should accept POST requests to /classes/messages
+  //should respond with messages that were previously posted
+  } else if (request.method === 'POST' && request.url === '/classes/messages') {
+    var data = [];
+    request.on('error', (err) => {
+      console.error(err);
+    }).on('data', (chunk) => {
+      data.push(chunk);
+    }).on('end', () => {
+      var message = Buffer.concat(data).toString();
+      body.results.push(JSON.parse(message));
+      statusCode = 201;
+      // .writeHead() writes to the request line and headers of the response,
+      // which includes the status and all headers.
+      response.writeHead(statusCode, headers);
+      // Calling .end "flushes" the response's internal buffer, forcing
+      // node to actually send all the data over to the client.
+      response.end();
+    });
+
+  //Should 404 when asked for a nonexistent file
+  } else {
+    statusCode = 404;
+    // .writeHead() writes to the request line and headers of the response,
+    // which includes the status and all headers.
+    response.writeHead(statusCode, headers);
+    // Calling .end "flushes" the response's internal buffer, forcing
+    // node to actually send all the data over to the client.
+    response.end();
+  }
+
 };
 
 exports.requestHandler = requestHandler;
