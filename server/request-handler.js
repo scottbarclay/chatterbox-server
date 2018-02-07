@@ -60,12 +60,21 @@ var requestHandler = function(request, response) {
 
   // The outgoing status.
   var statusCode = 0;
+  
+  if (request.method === 'OPTIONS') {
+    statusCode = 200;
+    // .writeHead() writes to the request line and headers of the response,
+    // which includes the status and all headers.
+    response.writeHead(statusCode, headers);
+    // Calling .end "flushes" the response's internal buffer, forcing
+    // node to actually send all the data over to the client.
+    response.end();
 
   // should respond to GET requests for /classes/messages with a 200 status code
   // should send back parsable stringified JSON
   // should send back an object
   // should send an object containing a `results` array
-  if (request.method === 'GET' && request.url === '/classes/messages') {
+  } else if (request.method === 'GET' && request.url === '/classes/messages') {
     statusCode = 200;
     // .writeHead() writes to the request line and headers of the response,
     // which includes the status and all headers.
@@ -76,7 +85,7 @@ var requestHandler = function(request, response) {
 
   //should accept POST requests to /classes/messages
   //should respond with messages that were previously posted
-  } else if (request.method === 'POST' && request.url === '/classes/messages') {
+  } else if (request.method === 'POST' && (request.url === '/classes/messages' || request.url === '/classes/room')) {
     var data = [];
     request.on('error', (err) => {
       console.error(err);
